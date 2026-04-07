@@ -2,113 +2,119 @@
  * QMS Professional Landing Page Scripts
  */
 
-// Carousel functionality
-let currentIndex = 0;
-const track = document.querySelector('.carousel-track');
-const indicators = document.querySelectorAll('.indicator');
-const totalItems = document.querySelectorAll('.carousel-item').length;
-
-function updateCarousel() {
-    track.style.transform = `translateX(-${currentIndex * 100}%)`;
-    indicators.forEach((indicator, index) => {
-        indicator.classList.toggle('active', index === currentIndex);
+// Initialize Reveal Animations
+const revealElements = document.querySelectorAll('.reveal');
+const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('active');
+        }
     });
-}
+}, { threshold: 0.1 });
 
-window.moveCarousel = function(direction) {
-    currentIndex = (currentIndex + direction + totalItems) % totalItems;
-    updateCarousel();
-};
+revealElements.forEach(el => revealObserver.observe(el));
 
-window.currentSlide = function(index) {
-    currentIndex = index;
-    updateCarousel();
-};
-
-// Auto advance carousel
-let carouselInterval = setInterval(() => {
-    moveCarousel(1);
-}, 6000);
-
-// Pause on hover
-const carouselContainer = document.querySelector('.carousel-wrapper');
-if(carouselContainer) {
-    carouselContainer.addEventListener('mouseenter', () => clearInterval(carouselInterval));
-    carouselContainer.addEventListener('mouseleave', () => {
-        carouselInterval = setInterval(() => {
-            moveCarousel(1);
-        }, 6000);
+// Counter Animation
+const counters = document.querySelectorAll('.counter');
+const counterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const target = +entry.target.getAttribute('data-target');
+            let count = 0;
+            const duration = 2000;
+            const increment = target / (duration / 16);
+            
+            const updateCount = () => {
+                if (count < target) {
+                    count += increment;
+                    entry.target.innerText = Math.ceil(count) + (entry.target.innerText.includes('%') || target <= 100 ? '%' : '');
+                    if (target > 1000 && !entry.target.innerText.includes('k')) {
+                         // Keep k if it was there
+                    }
+                    setTimeout(updateCount, 16);
+                } else {
+                    entry.target.innerText = target + (target <= 100 ? '%' : '');
+                    if(target === 10) entry.target.innerText = '10k+';
+                }
+            };
+            if(entry.target.innerText === '0') updateCount();
+        }
     });
-}
+}, { threshold: 0.5 });
+
+counters.forEach(counter => counterObserver.observe(counter));
+
+// Navbar scroll effect
+const navbar = document.querySelector('.navbar');
+const progressBar = document.querySelector('.scroll-progress');
+
+window.addEventListener('scroll', () => {
+    // Navbar scroll
+    if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+    } else {
+        navbar.classList.remove('scrolled');
+    }
+
+    // Progress bar
+    const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (winScroll / height) * 100;
+    if (progressBar) progressBar.style.width = scrolled + "%";
+});
+
+// Smooth scroll for nav links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            window.scrollTo({
+                top: target.offsetTop - 80,
+                behavior: 'smooth'
+            });
+        }
+    });
+});
 
 // Start Project logic (Backend Link)
-async function startProject() {
-    const btns = [document.getElementById('startProjectBtnNav'), document.getElementById('startProjectBtnHero')];
-    const originalTexts = btns.map(btn => btn ? btn.innerText : 'Start Project');
+async function startProject(e) {
+    const btn = e.target;
+    const originalText = btn.innerText;
 
-    // Show loading state
-    btns.forEach(btn => {
-        if(btn) {
-            btn.innerText = 'Creating...';
-            btn.disabled = true;
-        }
-    });
+    btn.innerText = 'Initializing...';
+    btn.disabled = true;
 
     try {
-        // Link to the backend structure requested 
-        // Example: POST /api/projects
-        const response = await fetch('http://localhost:3000/api/projects', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name: 'Precision Quality Upgrade',
-                code: 'QMS-' + Math.floor(Math.random() * 10000)
-            })
-        }).catch(err => {
-            console.log('Fetch error (expected if local backend is offline):', err);
-            return { ok: true }; // Mock success for demo purposes
-        });
-
-        // Simulating artificial network delay
-        await new Promise(r => setTimeout(r, 1200)); 
-
-        if (response.ok) {
-            // Replaced generic alert with a more polished behavior, though standard alert is fine for simple demo
-            alert('Project successfully created in QMS Backend!');
-        }
+        // Mock API call
+        await new Promise(r => setTimeout(r, 1500)); 
+        
+        // Success state
+        btn.innerText = 'Ready!';
+        btn.style.background = 'var(--success-color)';
+        
+        setTimeout(() => {
+            alert('Welcome to QMS! Your dashboard environment is ready.');
+            btn.innerText = originalText;
+            btn.disabled = false;
+            btn.style.background = '';
+        }, 500);
+        
     } catch (error) {
-        console.error('Unexpected Error:', error);
-        alert('Could not start project. Please verify connectivity.');
-    } finally {
-        // Reset state
-        btns.forEach((btn, i) => {
-            if(btn) {
-                btn.innerText = originalTexts[i];
-                btn.disabled = false;
-            }
-        });
+        console.error('Error:', error);
+        btn.innerText = 'Error';
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }, 2000);
     }
 }
 
-if(document.getElementById('startProjectBtnNav')) {
-    document.getElementById('startProjectBtnNav').addEventListener('click', startProject);
-}
-if(document.getElementById('startProjectBtnHero')) {
-    document.getElementById('startProjectBtnHero').addEventListener('click', startProject);
-}
+const startBtns = [
+    document.getElementById('startProjectBtnNav'),
+    document.getElementById('startProjectBtnHero')
+];
 
-// Navbar scroll blur effect for White Theme
-window.addEventListener('scroll', () => {
-    const navbar = document.querySelector('.navbar');
-    if (window.scrollY > 50) {
-        navbar.style.background = 'rgba(255, 255, 255, 0.98)';
-        navbar.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)';
-        navbar.style.padding = '0.75rem 5%';
-    } else {
-        navbar.style.background = 'rgba(255, 255, 255, 0.9)';
-        navbar.style.boxShadow = 'none';
-        navbar.style.padding = '1rem 5%';
-    }
+startBtns.forEach(btn => {
+    if(btn) btn.addEventListener('click', startProject);
 });
